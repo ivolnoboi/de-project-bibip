@@ -47,7 +47,7 @@ class CarService:
 
     # Задание 2. Сохранение продаж.
     def sell_car(self, sale: Sale) -> Car:
-        result_str = f'{sale.sales_number};{sale.car_vin};{sale.sales_date}'.ljust(500) + '\n'
+        result_str = f'{sale.sales_number};{sale.car_vin};{sale.sales_date};{sale.cost}'.ljust(500) + '\n'
         with open(self.root_directory_path + "/sales.txt", "a") as f:
             f.write(result_str)
     
@@ -109,15 +109,69 @@ class CarService:
 
     # Задание 4. Детальная информация
     def get_car_info(self, vin: str) -> CarFullInfo | None:
-        raise NotImplementedError
-#     vin — VIN-код автомобиля,
-# model_name — марку автомобиля,
-# model_brand — бренд автомобиля (его нужно взять из model.brand),
-# price — закупочную стоимость,
-# date_start — дату поступления в продажу,
-# status — статус,
-# sales_date — дату продажи, либо None, если машина ещё не продана,
-# sales_cost — цену продажи, либо None, если машина ещё не продана.
+        model_name: str = None
+        model_brand: str = None
+        price: Decimal = None
+        date_start: datetime = None
+        status: CarStatus = None
+        sales_date: datetime = None
+        sales_cost: Decimal = None
+        model: int = None
+        # find a car
+        line_number = -1
+        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
+            arr = f.readlines()
+            temp_arr2 = [i for i in arr if vin in i]
+            line_number = int(temp_arr2[0].strip().split(';')[1])
+        
+        with open(self.root_directory_path + "/cars.txt", "r") as f:
+            f.seek(line_number * 501)
+            val = f.read(500)
+            car = val.strip().split(';')
+            model=int(car[1])
+            price=Decimal(car[2])
+            date_start=datetime.strptime(car[3], '%Y-%m-%d %X')
+            status=car[4]
+
+        line_number = -1
+        with open(self.root_directory_path + "/models_index.txt", "r") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                model_index, line_number = [int(i) for i in line.strip().split(';')]
+                if model_index == model:
+                    break
+
+        with open(self.root_directory_path + "/models.txt", "r") as f:
+            f.seek(line_number * 501)
+            val = f.read(500)
+            index, model_name, model_brand = val.strip().split(';')
+        
+        if status == CarStatus.sold:
+            line_number = -1
+            with open(self.root_directory_path + "/sales_index.txt", "r") as f:
+                arr = f.readlines()
+                temp_arr2 = [i for i in arr if vin in i]
+                line_number = int(temp_arr2[0].strip().split(';')[1])
+        
+            with open(self.root_directory_path + "/sales.txt", "r") as f:
+                f.seek(line_number * 501)
+                val = f.read(500)
+                sale = val.strip().split(';')
+                sales_date = datetime.strptime(sale[2], '%Y-%m-%d %X')
+                sales_cost = Decimal(sale[3])
+
+        return CarFullInfo(
+            vin=vin,
+            car_model_name=model_name,
+            car_model_brand=model_brand,
+            price=price,
+            date_start=date_start,
+            status=status,
+            sales_date=sales_date,
+            sales_cost=sales_cost,
+        )
 
     # Задание 5. Обновление ключевого поля
     def update_vin(self, vin: str, new_vin: str) -> Car:
