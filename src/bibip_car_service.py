@@ -122,6 +122,8 @@ class CarService:
         with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
             arr = f.readlines()
             temp_arr2 = [i for i in arr if vin in i]
+            if len(temp_arr2) == 0:
+                return None
             line_number = int(temp_arr2[0].strip().split(';')[1])
         
         with open(self.root_directory_path + "/cars.txt", "r") as f:
@@ -175,7 +177,35 @@ class CarService:
 
     # Задание 5. Обновление ключевого поля
     def update_vin(self, vin: str, new_vin: str) -> Car:
-        raise NotImplementedError
+        # find a car
+        line_number = -1
+        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
+            arr = f.readlines()
+            temp_arr2 = [(i, v) for i, v in enumerate(arr) if vin in v]
+            arr_index = temp_arr2[0][0] # what if out of range
+            line_number = int(temp_arr2[0][1].strip().split(';')[1])
+            # writing to file
+            arr[arr_index] = f'{new_vin};{line_number}'.ljust(30) + '\n'
+            arr = sorted(arr)
+            f.seek(0)
+            f.writelines(arr)
+        
+        final_car = Car(vin='', model=-1, price=Decimal('0'), date_start=datetime.now(), status=CarStatus.sold)
+        with open(self.root_directory_path + "/cars.txt", "r+") as f:
+            f.seek(line_number * 501)
+            val = f.read(500)
+            car = val.strip().split(';')
+            final_car = Car(
+                vin=new_vin,
+                model=int(car[1]),
+                price=Decimal(car[2]),
+                date_start=datetime.strptime(car[3], '%Y-%m-%d %X'),
+                status=CarStatus(car[4]),
+            )
+            f.seek(line_number * 502)
+            line_to_write = f'{final_car.vin};{final_car.model};{final_car.price};{final_car.date_start};{final_car.status}'.ljust(500) + '\n'
+            f.write(line_to_write)
+        return final_car
 
     # Задание 6. Удаление продажи
     def revert_sale(self, sales_number: str) -> Car:
