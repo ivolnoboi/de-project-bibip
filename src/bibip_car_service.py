@@ -1,3 +1,5 @@
+from datetime import datetime
+from decimal import Decimal
 from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale
 
 
@@ -45,7 +47,50 @@ class CarService:
 
     # Задание 2. Сохранение продаж.
     def sell_car(self, sale: Sale) -> Car:
-        raise NotImplementedError
+        result_str = f'{sale.sales_number};{sale.car_vin};{sale.sales_date}'.ljust(500) + '\n'
+        print(len(result_str))
+        with open(self.root_directory_path + "/sales.txt", "a") as f:
+            f.write(result_str)
+    
+        f = open(self.root_directory_path + "/sales_index.txt", 'a')
+        f.close()
+        with open(self.root_directory_path + "/sales_index.txt", "r+") as f:
+            arr = f.readlines()
+            new_index = len(arr)
+            temp_arr = [i.strip().split(';') for i in arr]
+            temp_arr.append([sale.sales_number, str(new_index)])
+            temp_arr = sorted(temp_arr, key=lambda x: x[0])
+            arr = [f'{i[0]};{i[1]}'.ljust(30) + '\n' for i in temp_arr]
+            f.seek(0)
+            f.writelines(arr)
+        
+        # find a car
+        line_number = -1
+        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
+            arr = f.readlines()
+            temp_arr2 = [i for i in arr if sale.car_vin in i]
+            print(temp_arr2)
+            line_number = int(temp_arr2[0].strip().split(';')[1])
+            print(line_number)
+        
+        final_car = Car(vin='', model=-1, price=Decimal('0'), date_start=datetime.now(), status=CarStatus.sold)
+        with open(self.root_directory_path + "/cars.txt", "r+") as f:
+            f.seek(line_number * 501)
+            val = f.read(500)
+            car = val.strip().split(';')
+            final_car = Car(
+                vin=car[0],
+                model=int(car[1]),
+                price=Decimal(car[2]),
+                date_start=datetime.strptime(car[3], '%Y-%m-%d %X'),
+                status=CarStatus.sold,
+            )
+            f.seek(line_number * 502)
+            line_to_write = f'{final_car.vin};{final_car.model};{final_car.price};{final_car.date_start};{final_car.status}'.ljust(500) + '\n'
+            print(f.tell())
+            f.write(line_to_write)
+        return final_car
+
 
     # Задание 3. Доступные к продаже
     def get_cars(self, status: CarStatus) -> list[Car]:
