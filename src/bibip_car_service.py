@@ -57,7 +57,7 @@ class CarService:
             arr = f.readlines()
             new_index = len(arr)
             temp_arr = [i.strip().split(';') for i in arr]
-            temp_arr.append([sale.sales_number, str(new_index)])
+            temp_arr.append([sale.car_vin, str(new_index)])
             temp_arr = sorted(temp_arr, key=lambda x: x[0])
             arr = [f'{i[0]};{i[1]}'.ljust(30) + '\n' for i in temp_arr]
             f.seek(0)
@@ -110,6 +110,14 @@ class CarService:
     # Задание 4. Детальная информация
     def get_car_info(self, vin: str) -> CarFullInfo | None:
         raise NotImplementedError
+#     vin — VIN-код автомобиля,
+# model_name — марку автомобиля,
+# model_brand — бренд автомобиля (его нужно взять из model.brand),
+# price — закупочную стоимость,
+# date_start — дату поступления в продажу,
+# status — статус,
+# sales_date — дату продажи, либо None, если машина ещё не продана,
+# sales_cost — цену продажи, либо None, если машина ещё не продана.
 
     # Задание 5. Обновление ключевого поля
     def update_vin(self, vin: str, new_vin: str) -> Car:
