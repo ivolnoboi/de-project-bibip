@@ -3,13 +3,113 @@ from decimal import Decimal
 from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale
 
 
+def make_car_record(car: Car) -> str:
+    '''Make a string from a car object for inserting into a table.'''
+    return f'{car.vin};{car.model};{car.price};{car.date_start};{car.status}'.ljust(500) + '\n'
+
+
+def make_car_object(record: str) -> Car:
+    '''Make a car object from a record from a table.'''
+    car = record.strip().split(';')
+    return Car(
+        vin=car[0],
+        model=int(car[1]),
+        price=Decimal(car[2]),
+        date_start=datetime.strptime(car[3], '%Y-%m-%d %X'),
+        status=CarStatus(car[4])
+    )
+
+
+def make_model_record(model: Model) -> str:
+    '''Make a string from a model object for inserting into a table.'''
+    return f'{model.id};{model.name};{model.brand}'.ljust(500) + '\n'
+
+
+def make_model_object(record: str) -> Model:
+    '''Make a model object from a record from a table.'''
+    model = record.strip().split(';')
+    return Model(
+        id=int(model[0]),
+        name=model[1],
+        brand=model[2]
+    )
+
+
+def make_sale_object(record: str) -> Sale:
+    '''Make a sale object from a table's record.'''
+    sale = record.strip().split(';')
+    return Sale(
+        sales_number=sale[0],
+        car_vin=sale[1],
+        sales_date=datetime.strptime(sale[2], '%Y-%m-%d %X'),
+        cost=Decimal(sale[3])
+    )
+
+
+def find_car_by_vin(vin: str, root_dir_path: str) -> Car | None:
+    '''Find a car record by vin in a table and create a car object.'''
+    line_number: int | None = None
+    with open(root_dir_path + "/cars_index.txt", "r") as f:
+        while True:
+            line = f.readline()
+            if not line:  # if it's end of file
+                return None
+            if vin in line:  # if record is found
+                line_number = int(line.strip().split(';')[1])
+                break
+
+    with open(root_dir_path + "/cars.txt", "r") as f:
+        f.seek(line_number * 502)
+        val = f.read(501)
+        return make_car_object(val)
+    return None
+
+
+def find_model_by_id(model_id: str, root_dir_path: str) -> Model | None:
+    line_number: int | None = None
+    with open(root_dir_path + "/models_index.txt", "r") as f:
+        while True:
+            line = f.readline()
+            if not line:  # if it's end of file
+                return None
+            model_index, model_record_num = line.strip().split(';')
+            if model_index == model_id:  # if it's found
+                line_number = int(model_record_num)
+                break
+
+    with open(root_dir_path + "/models.txt", "r") as f:
+        f.seek(line_number * 502)
+        val = f.read(501)
+        return make_model_object(val)
+    return None
+
+
+def find_sale_by_car_vin(car_vin: str, root_dir_path: str) -> Sale | None:
+    '''Find a sale record by vin in a table and create a car object.'''
+    line_number: int | None = None
+    with open(root_dir_path + "/sales_index.txt", "r") as f:
+        while True:
+            line = f.readline()
+            if not line:  # if it's end of file
+                return None
+            if car_vin in line:  # if record is found
+                line_number = int(line.strip().split(';')[1])
+                break
+
+    with open(root_dir_path + "/sales.txt", "r") as f:
+        f.seek(line_number * 502)
+        val = f.read(501)
+        return make_sale_object(val)
+    return None
+
+
 class CarService:
     def __init__(self, root_directory_path: str) -> None:
         self.root_directory_path = root_directory_path
 
     # Задание 1. Сохранение автомобилей и моделей
     def add_model(self, model: Model) -> Model:
-        result_str = f'{model.id};{model.name};{model.brand}'.ljust(500) + '\n'
+        result_str = make_model_record(model)
         with open(self.root_directory_path + "/models.txt", "a") as f:
             f.write(result_str)
 
@@ -29,7 +129,7 @@ class CarService:
 
     # Задание 1. Сохранение автомобилей и моделей
     def add_car(self, car: Car) -> Car:
-        result_str = f'{car.vin};{car.model};{car.price};{car.date_start};{car.status}'.ljust(500) + '\n'
+        result_str = make_car_record(car)
         with open(self.root_directory_path + "/cars.txt", "a") as f:
             f.write(result_str)
 
@@ -107,70 +207,36 @@ class CarService:
                     available_cars.append(car)
         return available_cars
 
-    # Задание 4. Детальная информация
+    # Task 4. Detailed information
     def get_car_info(self, vin: str) -> CarFullInfo | None:
-        model_name: str = None
-        model_brand: str = None
-        price: Decimal = None
-        date_start: datetime = None
-        status: CarStatus = None
-        sales_date: datetime = None
-        sales_cost: Decimal = None
-        model: int = None
-        # find a car
-        line_number = -1
-        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
-            arr = f.readlines()
-            temp_arr2 = [i for i in arr if vin in i]
-            if len(temp_arr2) == 0:
-                return None
-            line_number = int(temp_arr2[0].strip().split(';')[1])
-        
-        with open(self.root_directory_path + "/cars.txt", "r") as f:
-            f.seek(line_number * 501)
-            val = f.read(500)
-            car = val.strip().split(';')
-            model=int(car[1])
-            price=Decimal(car[2])
-            date_start=datetime.strptime(car[3], '%Y-%m-%d %X')
-            status=car[4]
+        '''Get detailed information about a car by vin.'''
+        sales_date: datetime | None = None
+        sales_cost: Decimal | None = None
 
-        line_number = -1
-        with open(self.root_directory_path + "/models_index.txt", "r") as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                model_index, line_number = [int(i) for i in line.strip().split(';')]
-                if model_index == model:
-                    break
+        # looking for a car
+        car = find_car_by_vin(vin, self.root_directory_path)
+        if not car:  # if the car is not found
+            return None
 
-        with open(self.root_directory_path + "/models.txt", "r") as f:
-            f.seek(line_number * 501)
-            val = f.read(500)
-            index, model_name, model_brand = val.strip().split(';')
-        
-        if status == CarStatus.sold:
-            line_number = -1
-            with open(self.root_directory_path + "/sales_index.txt", "r") as f:
-                arr = f.readlines()
-                temp_arr2 = [i for i in arr if vin in i]
-                line_number = int(temp_arr2[0].strip().split(';')[1])
-        
-            with open(self.root_directory_path + "/sales.txt", "r") as f:
-                f.seek(line_number * 501)
-                val = f.read(500)
-                sale = val.strip().split(';')
-                sales_date = datetime.strptime(sale[2], '%Y-%m-%d %X')
-                sales_cost = Decimal(sale[3])
+        # looking for a model name and brand
+        model = find_model_by_id(str(car.model), self.root_directory_path)
+        if not model:  # if the model is not found
+            return None
+
+        # looking for a sale if exists
+        if car.status == CarStatus.sold:
+            sale = find_sale_by_car_vin(vin, self.root_directory_path)
+            if sale:
+                sales_date = sale.sales_date
+                sales_cost = sale.cost
 
         return CarFullInfo(
             vin=vin,
-            car_model_name=model_name,
-            car_model_brand=model_brand,
-            price=price,
-            date_start=date_start,
-            status=status,
+            car_model_name=model.name,
+            car_model_brand=model.brand,
+            price=car.price,
+            date_start=car.date_start,
+            status=car.status,
             sales_date=sales_date,
             sales_cost=sales_cost,
         )

@@ -1,6 +1,8 @@
 # from decimal import Decimal
 # from datetime import datetime
-# from src.models import Car, CarStatus
+from datetime import datetime
+from decimal import Decimal
+from src.models import Car, CarStatus
 from os import rename, remove
 
 
@@ -38,6 +40,6 @@ with open('data.txt', 'w') as f:
 #     f.seek((cur_line - 1) * 22)
 #     f.truncate()
 
-dict_tmp: dict[str, int] = {}
-dict_tmp['cat'] = dict_tmp['cat'] + 1 if 'cat' in dict_tmp else 1
-print(dict_tmp.items())
+    with open("data.txt", "r") as f:
+        f.seek(None * 20)
+        val = f.read(20)
