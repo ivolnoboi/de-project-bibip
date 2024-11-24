@@ -1,45 +1,39 @@
-from decimal import Decimal
-from datetime import datetime
-from src.models import Car, CarStatus
+# from decimal import Decimal
+# from datetime import datetime
+# from src.models import Car, CarStatus
+from os import rename, remove
 
 
-def create_line(car: Car) -> str:
-    result_str = f'{car.vin};{car.model};{car.price};{car.date_start};{car.status}'.ljust(500) + '\n'
-    with open("data.txt", "a") as f:
-        f.write(result_str)
-    
-    with open("index.txt", "r+") as f:
-        arr = f.readlines()
-        new_index = len(arr)
-        arr.append(f'{car.vin};{new_index}'.ljust(30) + '\n')
-        arr = sorted(arr)
-        f.seek(0)
-        f.writelines(arr)
-        print(arr)
+arr = ['aaaaaa', 'bbb', 'ccccccc', 'dddddd', 'eeee', 'fffffff']
+with open('data.txt', 'w') as f:
+    for i in arr:
+        f.write(i.ljust(20) + '\n')
 
+# line_to_del = 3
+# with open('exp.txt', 'r') as rf:
+#     with open('exp2.txt', 'w') as wf:
+#         counter = 0
+#         while True:
+#             line = rf.readline()
+#             if not line:
+#                 break
+#             counter += 1
+#             if counter == line_to_del:
+#                 continue
+#             wf.write(line)
+# remove('exp.txt')
+# rename('exp2.txt', 'exp.txt')
 
-    print(result_str)
-    return result_str
-
-
-create_line(Car(
-            vin="5N1AR2MM4DC605882",
-            model=4,
-            price=Decimal("3200"),
-            date_start=datetime(2024, 7, 15),
-            status=CarStatus.available,
-        ))
-
-
-# arr = [1,2,3,4,5,7,8,9]
-# i = 0
-# number = 6
-# while number > arr[i] and i < len(arr):
-#     i += 1
-# print(i)
-# arr.insert(i, number)
-# print(arr)
-
-arr = [['aaa', 3], ['ccc', 2], ['bbb', 1]]
-print(sorted(arr, key=lambda x: x[1]))
-print(int('56'))
+line_to_remove = 2
+cur_line = 3
+with open("data.txt", "r+") as f:
+    while True:
+        f.seek(cur_line * 22)
+        line = f.read(21)
+        if not line:
+            break
+        f.seek((cur_line - 1) * 22)
+        f.write(line)
+        cur_line += 1
+    f.seek((cur_line - 1) * 22)
+    f.truncate()

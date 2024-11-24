@@ -209,7 +209,64 @@ class CarService:
 
     # Задание 6. Удаление продажи
     def revert_sale(self, sales_number: str) -> Car:
-        raise NotImplementedError
+        # removing record from index file and find a line in sales.txt (line_number)
+        line_number = -1
+        with open(self.root_directory_path + "/sales_index.txt", "r+") as f:
+            arr = f.readlines()
+            vin = sales_number.split('#')[1]
+            # sale_ind is a number of line to remove in sales_index.txt
+            sale_ind, sale_line = [(i, v) for i, v in enumerate(arr) if vin in v][0]
+            # line_number is a number of line to remove in sale.txt
+            line_number = int(sale_line.strip().split(';')[1])
+            # writing to file
+            first_arr = arr[:sale_ind]
+            second_arr = []
+            # recalculating indexes
+            for elem in arr[sale_ind + 1:]:
+                vin, ind = elem.strip().split(';')
+                second_arr.append(f'{vin};{int(ind) - 1}'.ljust(30) + '\n')
+            arr = first_arr + second_arr
+            f.seek(0)
+            f.writelines(arr)
+            f.truncate()
+        
+        # removing a record from sales.txt
+        cur_line = line_number + 1
+        with open(self.root_directory_path + "/sales.txt", "r+") as f:
+            while True:
+                f.seek(cur_line * 502)
+                line = f.read(501)
+                if not line:
+                    break
+                f.seek((cur_line - 1) * 502)
+                f.write(line)
+                cur_line += 1
+            f.seek((cur_line - 1) * 502)
+            f.truncate()
+
+        # finding a line number of a car
+        line_number = -1
+        vin = sales_number.split('#')[1]
+        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
+            arr = f.readlines()
+            temp_arr2 = [(i, v) for i, v in enumerate(arr) if vin in v]
+            line_number = int(temp_arr2[0][1].strip().split(';')[1])
+        
+        with open(self.root_directory_path + "/cars.txt", "r+") as f:
+            f.seek(line_number * 502)
+            val = f.read(501)
+            car = val.strip().split(';')
+            final_car = Car(
+                vin=car[0],
+                model=int(car[1]),
+                price=Decimal(car[2]),
+                date_start=datetime.strptime(car[3], '%Y-%m-%d %X'),
+                status=CarStatus(car[4]),
+            )
+            f.seek(line_number * 502)
+            line_to_write = f'{final_car.vin};{final_car.model};{final_car.price};{final_car.date_start};{'available'}'.ljust(500) + '\n'
+            f.write(line_to_write)
+        return final_car
 
     # Задание 7. Самые продаваемые модели
     def top_models_by_sales(self) -> list[ModelSaleStats]:
