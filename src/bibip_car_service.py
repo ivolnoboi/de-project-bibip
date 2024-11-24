@@ -270,4 +270,60 @@ class CarService:
 
     # Задание 7. Самые продаваемые модели
     def top_models_by_sales(self) -> list[ModelSaleStats]:
-        raise NotImplementedError
+        model_sales_dict: dict[str, int] = {}
+        with open(self.root_directory_path + "/sales.txt", "r") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                # write function get_sale_from_table
+                sale_line = line.strip().split(';')
+                car_vin = sale_line[1]
+        
+                # use function get_car_by_vin
+                # find a car
+                line_number = -1
+                with open(self.root_directory_path + "/cars_index.txt", "r") as f_ci:
+                    arr = f_ci.readlines()
+                    temp_arr2 = [i for i in arr if car_vin in i]
+                    line_number = int(temp_arr2[0].strip().split(';')[1])
+        
+                with open(self.root_directory_path + "/cars.txt", "r+") as f_c:
+                    f_c.seek(line_number * 502)
+                    val = f_c.read(501)
+                    model = val.strip().split(';')[1]
+                    # adding to the dictionary
+                    model_sales_dict[model] = model_sales_dict[model] + 1 if model in model_sales_dict else 1
+        
+        print('model_sales_dict = ', model_sales_dict)
+        top_3_models = sorted(model_sales_dict.items(), key=lambda x: x[1], reverse=True)[:3]
+        model_sale_stats: list[ModelSaleStats] = []
+        print('top_3_models = ', top_3_models)
+        for model_id, count in top_3_models:
+            line_number = -1
+            with open(self.root_directory_path + "/models_index.txt", "r") as f:
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    # model_line is a number of line in models.txt
+                    model_index, model_line = [i for i in line.strip().split(';')]
+                    if model_index == model_id:
+                        line_number = int(model_line)
+                        break
+                print(line_number)
+
+            with open(self.root_directory_path + "/models.txt", "r") as f:
+                f.seek(line_number * 502)
+                val = f.read(501)
+                index, model_name, model_brand = val.strip().split(';')
+                model_sale_stats.append(
+                    ModelSaleStats(
+                        car_model_name=model_name,
+                        brand=model_brand,
+                        sales_number=count
+                    )
+                )
+        print('model_sale_stats = ', model_sale_stats)
+
+        return model_sale_stats

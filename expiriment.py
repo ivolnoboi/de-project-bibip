@@ -24,16 +24,20 @@ with open('data.txt', 'w') as f:
 # remove('exp.txt')
 # rename('exp2.txt', 'exp.txt')
 
-line_to_remove = 2
-cur_line = 3
-with open("data.txt", "r+") as f:
-    while True:
-        f.seek(cur_line * 22)
-        line = f.read(21)
-        if not line:
-            break
-        f.seek((cur_line - 1) * 22)
-        f.write(line)
-        cur_line += 1
-    f.seek((cur_line - 1) * 22)
-    f.truncate()
+# line_to_remove = 2
+# cur_line = 3
+# with open("data.txt", "r+") as f:
+#     while True:
+#         f.seek(cur_line * 22)
+#         line = f.read(21)
+#         if not line:
+#             break
+#         f.seek((cur_line - 1) * 22)
+#         f.write(line)
+#         cur_line += 1
+#     f.seek((cur_line - 1) * 22)
+#     f.truncate()
+
+dict_tmp: dict[str, int] = {}
+dict_tmp['cat'] = dict_tmp['cat'] + 1 if 'cat' in dict_tmp else 1
+print(dict_tmp.items())
