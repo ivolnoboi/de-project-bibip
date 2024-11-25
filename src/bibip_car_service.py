@@ -229,39 +229,29 @@ class CarService:
             sales_cost=sales_cost,
         )
 
-    # Задание 5. Обновление ключевого поля
+    # Task 5. Updating key field
     def update_vin(self, vin: str, new_vin: str) -> Car:
+        '''Update a vin number.'''
         # find a car
-        line_number = -1
+        car_index = find_car_by_vin(vin, self.root_directory_path)
+        if car_index:
+            car, car_line = car_index
+
+        # recalculating indexes
         with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
             arr = f.readlines()
-            temp_arr2 = [(i, v) for i, v in enumerate(arr) if vin in v]
-            arr_index = temp_arr2[0][0]
-            line_number = int(temp_arr2[0][1].strip().split(';')[1])
-            # writing to file
-            arr[arr_index] = f'{new_vin};{line_number}'.ljust(30) + '\n'
+            index, _ = [(i, v) for i, v in enumerate(arr) if f'{car.vin};{car_line}' in v][0]
+            arr[index] = f'{new_vin};{car_line}'.ljust(30) + '\n'
             arr = sorted(arr)
             f.seek(0)
             f.writelines(arr)
 
-        final_car = Car(vin='', model=-1, price=Decimal('0'),
-                        date_start=datetime.now(), status=CarStatus.sold)
         with open(self.root_directory_path + "/cars.txt", "r+") as f:
-            f.seek(line_number * 501)
-            val = f.read(500)
-            car = val.strip().split(';')
-            final_car = Car(
-                vin=new_vin,
-                model=int(car[1]),
-                price=Decimal(car[2]),
-                date_start=datetime.strptime(car[3], '%Y-%m-%d %X'),
-                status=CarStatus(car[4]),
-            )
-            f.seek(line_number * 502)
-            line_to_write = f'{final_car.vin};{final_car.model};{final_car.price};{
-                final_car.date_start};{final_car.status}'.ljust(500) + '\n'
+            f.seek(car_line * 502)
+            car.vin = new_vin
+            line_to_write = make_car_record(car)
             f.write(line_to_write)
-        return final_car
+        return car
 
     # Task 6. Removing sale.
     def revert_sale(self, sales_number: str) -> Car:
