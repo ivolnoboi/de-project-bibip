@@ -187,27 +187,20 @@ class CarService:
             f.write(line_to_write)
         return final_car
 
-    # Задание 3. Доступные к продаже
+    # Task 3. Cars available for sale.
     def get_cars(self, status: CarStatus) -> list[Car]:
         available_cars = []
         with open(self.root_directory_path + "/cars.txt", 'r') as f:
             while True:
                 line = f.readline()
-                if not line:
+                if not line:  # if it's end of file
                     break
                 if status in line:
-                    car_params = line.strip().split(';')
-                    car = Car(
-                        vin=car_params[0],
-                        model=int(car_params[1]),
-                        price=Decimal(car_params[2]),
-                        date_start=datetime.strptime(car_params[3], '%Y-%m-%d %X'),
-                        status=status,
-                    )
+                    car = make_car_object(line)
                     available_cars.append(car)
         return available_cars
 
-    # Task 4. Detailed information
+    # Task 4. Detailed information.
     def get_car_info(self, vin: str) -> CarFullInfo | None:
         '''Get detailed information about a car by vin.'''
         sales_date: datetime | None = None
