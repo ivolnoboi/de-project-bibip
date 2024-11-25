@@ -106,6 +106,13 @@ def find_sale_by_car_vin(car_vin: str, root_dir_path: str) -> Sale | None:
 class CarService:
     def __init__(self, root_directory_path: str) -> None:
         self.root_directory_path = root_directory_path
+        # initializing database (creating tables)
+        open(self.root_directory_path + "/models.txt", "a").close()
+        open(self.root_directory_path + "/models_index.txt", 'a').close()
+        open(self.root_directory_path + "/cars.txt", "a").close()
+        open(self.root_directory_path + "/cars_index.txt", 'a').close()
+        open(self.root_directory_path + "/sales.txt", "a").close()
+        open(self.root_directory_path + "/sales_index.txt", 'a').close()
 
     # Задание 1. Сохранение автомобилей и моделей
     def add_model(self, model: Model) -> Model:
@@ -113,8 +120,6 @@ class CarService:
         with open(self.root_directory_path + "/models.txt", "a") as f:
             f.write(result_str)
 
-        f = open(self.root_directory_path + "/models_index.txt", 'a')
-        f.close()
         with open(self.root_directory_path + "/models_index.txt", "r+") as f:
             arr = f.readlines()
             new_index = len(arr)
@@ -133,8 +138,6 @@ class CarService:
         with open(self.root_directory_path + "/cars.txt", "a") as f:
             f.write(result_str)
 
-        f = open(self.root_directory_path + "/cars_index.txt", 'a')
-        f.close()
         with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
             arr = f.readlines()
             new_index = len(arr)
@@ -151,8 +154,6 @@ class CarService:
         with open(self.root_directory_path + "/sales.txt", "a") as f:
             f.write(result_str)
     
-        f = open(self.root_directory_path + "/sales_index.txt", 'a')
-        f.close()
         with open(self.root_directory_path + "/sales_index.txt", "r+") as f:
             arr = f.readlines()
             new_index = len(arr)
