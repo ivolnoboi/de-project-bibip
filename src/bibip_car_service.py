@@ -107,7 +107,7 @@ def find_sale_by_car_vin(car_vin: str, root_dir_path: str) -> Sale | None:
 class CarService:
     def __init__(self, root_directory_path: str) -> None:
         self.root_directory_path = root_directory_path
-        # initializing database (creating tables)
+        # database initialization (creating tables)
         open(self.root_directory_path + "/models.txt", "a").close()
         open(self.root_directory_path + "/models_index.txt", 'a').close()
         open(self.root_directory_path + "/cars.txt", "a").close()
@@ -115,8 +115,9 @@ class CarService:
         open(self.root_directory_path + "/sales.txt", "a").close()
         open(self.root_directory_path + "/sales_index.txt", 'a').close()
 
-    # Задание 1. Сохранение автомобилей и моделей
+    # Task 1. Adding a model to the models table.
     def add_model(self, model: Model) -> Model:
+        '''Add a model to the models table.'''
         result_str = make_model_record(model)
         with open(self.root_directory_path + "/models.txt", "a") as f:
             f.write(result_str)
@@ -124,9 +125,9 @@ class CarService:
         with open(self.root_directory_path + "/models_index.txt", "r+") as f:
             arr = f.readlines()
             new_index = len(arr)
-            temp_arr = [[int(i.strip().split(';')[0]), int(
-                i.strip().split(';')[1])] for i in arr]
-            temp_arr.append([model.id, new_index])
+            temp_arr = [(int(i.strip().split(';')[0]), int(
+                i.strip().split(';')[1])) for i in arr]
+            temp_arr.append((model.id, new_index))
             temp_arr = sorted(temp_arr, key=lambda x: x[0])
             arr = [f'{i[0]};{i[1]}'.ljust(30) + '\n' for i in temp_arr]
             f.seek(0)
@@ -134,8 +135,9 @@ class CarService:
 
         return model
 
-    # Задание 1. Сохранение автомобилей и моделей
+    # Task 1. Adding a car to the cars table.
     def add_car(self, car: Car) -> Car:
+        '''Add a car to the cars table.'''
         result_str = make_car_record(car)
         with open(self.root_directory_path + "/cars.txt", "a") as f:
             f.write(result_str)
@@ -150,8 +152,9 @@ class CarService:
 
         return car
 
-    # Task 2. Save sale
+    # Task 2. Save sale.
     def sell_car(self, sale: Sale) -> Car:
+        '''Save a sale record to the sales table.'''
         result_str = f'{sale.sales_number};{sale.car_vin};{
             sale.sales_date};{sale.cost}'.ljust(500) + '\n'
         with open(self.root_directory_path + "/sales.txt", "a") as f:
@@ -179,6 +182,7 @@ class CarService:
 
     # Task 3. Cars available for sale.
     def get_cars(self, status: CarStatus) -> list[Car]:
+        '''Get all the cars available for sale.'''
         available_cars = []
         with open(self.root_directory_path + "/cars.txt", 'r') as f:
             while True:
@@ -232,7 +236,7 @@ class CarService:
         with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
             arr = f.readlines()
             temp_arr2 = [(i, v) for i, v in enumerate(arr) if vin in v]
-            arr_index = temp_arr2[0][0]  # what if out of range
+            arr_index = temp_arr2[0][0]
             line_number = int(temp_arr2[0][1].strip().split(';')[1])
             # writing to file
             arr[arr_index] = f'{new_vin};{line_number}'.ljust(30) + '\n'
@@ -259,19 +263,21 @@ class CarService:
             f.write(line_to_write)
         return final_car
 
-    # Задание 6. Удаление продажи
+    # Task 6. Removing sale.
     def revert_sale(self, sales_number: str) -> Car:
-        # removing record from index file and find a line in sales.txt (line_number)
+        '''Remove a sale record from sales.txt.'''
+        # removing record from index file and find the number of the
+        # line in sales.txt (line_number)
         line_number = -1
         with open(self.root_directory_path + "/sales_index.txt", "r+") as f:
             arr = f.readlines()
             vin = sales_number.split('#')[1]
-            # sale_ind is a number of line to remove in sales_index.txt
+            # sale_ind is the number of the line to remove in sales_index.txt
             sale_ind, sale_line = [(i, v)
                                    for i, v in enumerate(arr) if vin in v][0]
-            # line_number is a number of line to remove in sale.txt
+            # line_number is the number of the line to remove in sale.txt
             line_number = int(sale_line.strip().split(';')[1])
-            # writing to file
+            # writing to the file
             first_arr = arr[:sale_ind]
             second_arr = []
             # recalculating indexes
@@ -297,64 +303,48 @@ class CarService:
             f.seek((cur_line - 1) * 502)
             f.truncate()
 
-        # finding a line number of a car
-        line_number = -1
-        vin = sales_number.split('#')[1]
-        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
-            arr = f.readlines()
-            temp_arr2 = [(i, v) for i, v in enumerate(arr) if vin in v]
-            line_number = int(temp_arr2[0][1].strip().split(';')[1])
+        # finding a car and changing status to available
+        car_index = find_car_by_vin(vin, self.root_directory_path)
+        if car_index:
+            car, index_num = car_index
+            car.status = CarStatus('available')
+            with open(self.root_directory_path + "/cars.txt", "r+") as f:
+                f.seek(index_num * 502)
+                line_to_write = make_car_record(car)
+                f.write(line_to_write)
+        return car
 
-        with open(self.root_directory_path + "/cars.txt", "r+") as f:
-            f.seek(line_number * 502)
-            val = f.read(501)
-            car = val.strip().split(';')
-            final_car = Car(
-                vin=car[0],
-                model=int(car[1]),
-                price=Decimal(car[2]),
-                date_start=datetime.strptime(car[3], '%Y-%m-%d %X'),
-                status=CarStatus(car[4]),
-            )
-            f.seek(line_number * 502)
-            line_to_write = f'{final_car.vin};{final_car.model};{final_car.price};{
-                final_car.date_start};{'available'}'.ljust(500) + '\n'
-            f.write(line_to_write)
-        return final_car
-
-    # Задание 7. Самые продаваемые модели
+    # Task 7. Top 3 best selling models.
     def top_models_by_sales(self) -> list[ModelSaleStats]:
+        '''Find top 3 models by amount of sales.'''
         model_sales_dict: dict[str, int] = {}
+
+        # getting all sold cars and adding models and their sales count
+        # to the dictionary
         with open(self.root_directory_path + "/sales.txt", "r") as f:
             while True:
                 line = f.readline()
                 if not line:
                     break
-                # write function get_sale_from_table
+                # extracting vin number
                 sale_line = line.strip().split(';')
                 car_vin = sale_line[1]
 
-                # use function get_car_by_vin
-                # find a car
-                line_number = -1
-                with open(self.root_directory_path + "/cars_index.txt", "r") as f_ci:
-                    arr = f_ci.readlines()
-                    temp_arr2 = [i for i in arr if car_vin in i]
-                    line_number = int(temp_arr2[0].strip().split(';')[1])
-
-                with open(self.root_directory_path + "/cars.txt", "r+") as f_c:
-                    f_c.seek(line_number * 502)
-                    val = f_c.read(501)
-                    model = val.strip().split(';')[1]
+                # looking for a car
+                car_index = find_car_by_vin(car_vin, self.root_directory_path)
+                if car_index:
+                    car_model = str(car_index[0].model)
                     # adding to the dictionary
-                    model_sales_dict[model] = model_sales_dict[model] + \
-                        1 if model in model_sales_dict else 1
+                    model_sales_dict[car_model] = model_sales_dict[car_model] + \
+                        1 if car_model in model_sales_dict else 1
 
-        print('model_sales_dict = ', model_sales_dict)
+        # sorting models by count of sales
         top_3_models = sorted(model_sales_dict.items(),
                               key=lambda x: x[1], reverse=True)[:3]
+
         model_sale_stats: list[ModelSaleStats] = []
-        print('top_3_models = ', top_3_models)
+
+        # joining with the models table to get name and brand of a model
         for model_id, count in top_3_models:
             line_number = -1
             with open(self.root_directory_path + "/models_index.txt", "r") as f:
@@ -362,13 +352,11 @@ class CarService:
                     line = f.readline()
                     if not line:
                         break
-                    # model_line is a number of line in models.txt
-                    model_index, model_line = [
-                        i for i in line.strip().split(';')]
+                    # model_line is the number of the line in models.txt
+                    model_index, model_line = [i for i in line.strip().split(';')]
                     if model_index == model_id:
                         line_number = int(model_line)
                         break
-                print(line_number)
 
             with open(self.root_directory_path + "/models.txt", "r") as f:
                 f.seek(line_number * 502)
