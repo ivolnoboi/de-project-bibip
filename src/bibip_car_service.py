@@ -22,23 +22,17 @@ class CarService:
         '''Find a car record by vin in a table and create a car object.\n
         Returns: car object and it's index in table cars.txt.'''
         obj_line = self.__find_record_of_obj(vin, 'cars.txt', self.__car_indexes)
-        if obj_line:
-            return Car.make_object(obj_line[0]), obj_line[1]
-        return None
+        return (Car.make_object(obj_line[0]), obj_line[1]) if obj_line else None
 
     def __find_model_by_id(self, model_id: int) -> Model | None:
         '''Find a model record by id in a table and create a model object.'''
         obj_line = self.__find_record_of_obj(model_id, 'models.txt', self.__model_indexes)
-        if obj_line:
-            return Model.make_object(obj_line[0])
-        return None
+        return Model.make_object(obj_line[0]) if obj_line else None
 
     def __find_sale_by_car_vin(self, car_vin: str) -> Sale | None:
         '''Find a sale record by vin in a table and create a sale object.'''
         obj_line = self.__find_record_of_obj(car_vin, 'sales.txt', self.__sale_indexes)
-        if obj_line:
-            return Sale.make_object(obj_line[0])
-        return None
+        return Sale.make_object(obj_line[0]) if obj_line else None
 
     def __add_to_index_file(self, elem: int | str, file_name: str, dict: SortedDict) -> None:
         '''Add an item to an index file.'''
@@ -261,17 +255,12 @@ class CarService:
 
         # joining with the models table to get name and brand of a model
         for model_id, count in top_3_models:
-            line_number = self.__model_indexes[model_id] if model_id in self.__model_indexes else None
-
-            if line_number is not None:
-                with open(self.root_directory_path + "/models.txt", "r") as f:
-                    f.seek(line_number * (self.__record_len + self.__ws_size))
-                    val = f.read(self.__record_len)
-                    index, model_name, model_brand = val.strip().split(';')
-                    model_sale_stats.append(
+            model = self.__find_model_by_id(model_id)
+            if model:
+                model_sale_stats.append(
                         ModelSaleStats(
-                            car_model_name=model_name,
-                            brand=model_brand,
+                            car_model_name=model.name,
+                            brand=model.brand,
                             sales_number=count
                         )
                     )
