@@ -8,36 +8,36 @@ from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale, Dat
 
 class CarService:
 
-    def __find_car_by_vin(self, vin: str, root_dir_path: str) -> tuple[Car, int] | None:
+    def __find_record_of_obj(self, ind: str | int, file_name: str, dict: SortedDict) -> tuple[str, int] | None:
+        line_number = dict[ind] if ind in dict else None
+
+        if line_number is not None:
+            with open(self.root_directory_path + "/" + file_name, "r") as f:
+                f.seek(line_number * (self.__record_len + self.__ws_size))
+                val = f.read(self.__record_len)
+                return val, line_number
+        return None
+
+    def __find_car_by_vin(self, vin: str) -> tuple[Car, int] | None:
         '''Find a car record by vin in a table and create a car object.\n
         Returns: car object and it's index in table cars.txt.'''
-        line_number = self.__car_indexes[vin] if vin in self.__car_indexes else None
-
-        if line_number is not None:
-            with open(root_dir_path + "/cars.txt", "r") as f:
-                f.seek(line_number * (self.__record_len + self.__ws_size))
-                val = f.read(self.__record_len)
-                return Car.make_object(val), line_number
+        obj_line = self.__find_record_of_obj(vin, 'cars.txt', self.__car_indexes)
+        if obj_line:
+            return Car.make_object(obj_line[0]), obj_line[1]
         return None
 
-    def __find_model_by_id(self, model_id: int, root_dir_path: str) -> Model | None:
-        line_number = self.__model_indexes[model_id] if model_id in self.__model_indexes else None
-
-        with open(root_dir_path + "/models.txt", "r") as f:
-            f.seek(line_number * (self.__record_len + self.__ws_size))
-            val = f.read(self.__record_len)
-            return Model.make_object(val)
+    def __find_model_by_id(self, model_id: int) -> Model | None:
+        '''Find a model record by id in a table and create a model object.'''
+        obj_line = self.__find_record_of_obj(model_id, 'models.txt', self.__model_indexes)
+        if obj_line:
+            return Model.make_object(obj_line[0])
         return None
 
-    def __find_sale_by_car_vin(self, car_vin: str, root_dir_path: str) -> Sale | None:
-        '''Find a sale record by vin in a table and create a car object.'''
-        line_number = self.__sale_indexes[car_vin] if car_vin in self.__sale_indexes else None
-
-        if line_number is not None:
-            with open(root_dir_path + "/sales.txt", "r") as f:
-                f.seek(line_number * (self.__record_len + self.__ws_size))
-                val = f.read(self.__record_len)
-                return Sale.make_object(val)
+    def __find_sale_by_car_vin(self, car_vin: str) -> Sale | None:
+        '''Find a sale record by vin in a table and create a sale object.'''
+        obj_line = self.__find_record_of_obj(car_vin, 'sales.txt', self.__sale_indexes)
+        if obj_line:
+            return Sale.make_object(obj_line[0])
         return None
 
     def __add_to_index_file(self, elem: int | str, file_name: str, dict: SortedDict) -> None:
@@ -99,7 +99,7 @@ class CarService:
 
         self.__add_to_index_file(sale.car_vin, 'sales_index.txt', self.__sale_indexes)
 
-        car_index = self.__find_car_by_vin(sale.car_vin, self.root_directory_path)
+        car_index = self.__find_car_by_vin(sale.car_vin)
         if car_index:
             car, index_num = car_index
             car.status = CarStatus('sold')
@@ -130,19 +130,19 @@ class CarService:
         sales_cost: Decimal | None = None
 
         # looking for a car
-        car_index = self.__find_car_by_vin(vin, self.root_directory_path)
+        car_index = self.__find_car_by_vin(vin)
         if not car_index:  # if the car is not found
             return None
 
         car, _ = car_index
         # looking for a model name and brand
-        model = self.__find_model_by_id(car.model, self.root_directory_path)
+        model = self.__find_model_by_id(car.model)
         if not model:  # if the model is not found
             return None
 
         # looking for a sale if exists
         if car.status == CarStatus.sold:
-            sale = self.__find_sale_by_car_vin(vin, self.root_directory_path)
+            sale = self.__find_sale_by_car_vin(vin)
             if sale:
                 sales_date = sale.sales_date
                 sales_cost = sale.cost
@@ -162,7 +162,7 @@ class CarService:
     def update_vin(self, vin: str, new_vin: str) -> Car | None:
         '''Update a vin number.'''
         # looking for a car
-        car_index = self.__find_car_by_vin(vin, self.root_directory_path)
+        car_index = self.__find_car_by_vin(vin)
         if car_index:
             car, car_line = car_index
         else:
@@ -219,7 +219,7 @@ class CarService:
             f.truncate()
 
         # finding a car and changing status to available
-        car_index = self.__find_car_by_vin(vin, self.root_directory_path)
+        car_index = self.__find_car_by_vin(vin)
         if car_index:
             car, index_num = car_index
             car.status = CarStatus('available')
@@ -246,7 +246,7 @@ class CarService:
                 car_vin = sale_line[1]
 
                 # looking for a car
-                car_index = self.__find_car_by_vin(car_vin, self.root_directory_path)
+                car_index = self.__find_car_by_vin(car_vin)
                 if car_index:
                     car_model = car_index[0].model
                     # adding to the dictionary
