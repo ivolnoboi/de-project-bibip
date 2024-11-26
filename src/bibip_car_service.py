@@ -18,8 +18,7 @@ class CarService:
                 f.seek(line_number * (self.__record_len + self.__ws_size))
                 val = f.read(self.__record_len)
                 return Car.make_object(val), line_number
-        else:
-            return None
+        return None
 
     def __find_model_by_id(self, model_id: int, root_dir_path: str) -> Model | None:
         line_number = self.__model_indexes[model_id] if model_id in self.__model_indexes else None
@@ -32,20 +31,13 @@ class CarService:
 
     def __find_sale_by_car_vin(self, car_vin: str, root_dir_path: str) -> Sale | None:
         '''Find a sale record by vin in a table and create a car object.'''
-        line_number: int | None = None
-        with open(root_dir_path + "/sales_index.txt", "r") as f:
-            while True:
-                line = f.readline()
-                if not line:  # if it's end of file
-                    return None
-                if car_vin in line:  # if record is found
-                    line_number = int(line.strip().split(';')[1])
-                    break
+        line_number = self.__sale_indexes[car_vin] if car_vin in self.__sale_indexes else None
 
-        with open(root_dir_path + "/sales.txt", "r") as f:
-            f.seek(line_number * (self.__record_len + self.__ws_size))
-            val = f.read(self.__record_len)
-            return Sale.make_object(val)
+        if line_number is not None:
+            with open(root_dir_path + "/sales.txt", "r") as f:
+                f.seek(line_number * (self.__record_len + self.__ws_size))
+                val = f.read(self.__record_len)
+                return Sale.make_object(val)
         return None
 
     def __init__(self, root_directory_path: str) -> None:
@@ -107,14 +99,12 @@ class CarService:
         with open(self.root_directory_path + "/sales.txt", "a") as f:
             f.write(result_str)
 
-        with open(self.root_directory_path + "/sales_index.txt", "r+") as f:
-            arr = f.readlines()
-            new_index = len(arr)
-            temp_arr = [i.strip().split(';') for i in arr]
-            temp_arr.append([sale.car_vin, str(new_index)])
-            temp_arr = sorted(temp_arr, key=lambda x: x[0])
-            arr = [db.make_record(self.__index_record_len, i[0], i[1]) for i in temp_arr]
-            f.seek(0)
+        with open(self.root_directory_path + "/sales_index.txt", "w") as f:
+            self.__sale_indexes[sale.car_vin] = len(self.__sale_indexes)
+            arr = []
+            for i in self.__sale_indexes.items():
+                record = db.make_record(self.__index_record_len, i[0], i[1])
+                arr.append(record)
             f.writelines(arr)
 
         car_index = self.__find_car_by_vin(sale.car_vin, self.root_directory_path)
@@ -206,28 +196,21 @@ class CarService:
     # Task 6. Removing sale.
     def revert_sale(self, sales_number: str) -> Car:
         '''Remove a sale record from sales.txt.'''
-        # removing record from index file and find the number of the
-        # line in sales.txt (line_number)
-        line_number = -1
-        with open(self.root_directory_path + "/sales_index.txt", "r+") as f:
-            arr = f.readlines()
-            vin = sales_number.split('#')[1]
-            # sale_ind is the number of the line to remove in sales_index.txt
-            sale_ind, sale_line = [(i, v)
-                                   for i, v in enumerate(arr) if vin in v][0]
-            # line_number is the number of the line to remove in sale.txt
-            line_number = int(sale_line.strip().split(';')[1])
-            # writing to the file
-            first_arr = arr[:sale_ind]
-            second_arr = []
-            # recalculating indexes
-            for elem in arr[sale_ind + 1:]:
-                vin, ind = elem.strip().split(';')
-                second_arr.append(db.make_record(self.__index_record_len, vin, int(ind) - 1))
-            arr = first_arr + second_arr
-            f.seek(0)
+        # removing record from index file
+        vin = sales_number.split('#')[1]
+        # line_number is the number of the line to remove in sale.txt
+        line_number = self.__sale_indexes.pop(vin)
+
+        # recalculating and rewriting indexes
+        for (key, value) in self.__sale_indexes.items():
+            if value > line_number:
+                self.__sale_indexes[key] -= 1
+        arr = []
+        for i in self.__sale_indexes.items():
+            record = db.make_record(self.__index_record_len, i[0], i[1])
+            arr.append(record)
+        with open(self.root_directory_path + "/sales_index.txt", "w") as f:
             f.writelines(arr)
-            f.truncate()
 
         # removing a record from sales.txt
         cur_line = line_number + 1
