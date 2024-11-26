@@ -1,6 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
 import os
+
+from sortedcontainers import SortedDict
 from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale, DatabaseRecord as db
 
 
@@ -25,17 +27,8 @@ class CarService:
             return Car.make_object(val), line_number
         return None
 
-    def __find_model_by_id(self, model_id: str, root_dir_path: str) -> Model | None:
-        line_number: int | None = None
-        with open(root_dir_path + "/models_index.txt", "r") as f:
-            while True:
-                line = f.readline()
-                if not line:  # if it's end of file
-                    return None
-                model_index, model_record_num = line.strip().split(';')
-                if model_index == model_id:  # if it's found
-                    line_number = int(model_record_num)
-                    break
+    def __find_model_by_id(self, model_id: int, root_dir_path: str) -> Model | None:
+        line_number = self.__model_indexes[model_id] if model_id in self.__model_indexes else None
 
         with open(root_dir_path + "/models.txt", "r") as f:
             f.seek(line_number * (self.__record_len + self.__ws_size))
@@ -75,6 +68,9 @@ class CarService:
         open(self.root_directory_path + "/cars_index.txt", 'a').close()
         open(self.root_directory_path + "/sales.txt", "a").close()
         open(self.root_directory_path + "/sales_index.txt", 'a').close()
+        self.__model_indexes = SortedDict()
+        self.__car_indexes = SortedDict()
+        self.__sale_indexes = SortedDict()
 
     # Task 1. Adding a model to the models table.
     def add_model(self, model: Model) -> Model:
@@ -83,15 +79,12 @@ class CarService:
         with open(self.root_directory_path + "/models.txt", "a") as f:
             f.write(result_str)
 
-        with open(self.root_directory_path + "/models_index.txt", "r+") as f:
-            arr = f.readlines()
-            new_index = len(arr)
-            temp_arr = [(int(i.strip().split(';')[0]), int(
-                i.strip().split(';')[1])) for i in arr]
-            temp_arr.append((model.id, new_index))
-            temp_arr = sorted(temp_arr, key=lambda x: x[0])
-            arr = [db.make_record(self.__index_record_len, i[0], i[1]) for i in temp_arr]
-            f.seek(0)
+        with open(self.root_directory_path + "/models_index.txt", "w") as f:
+            self.__model_indexes[model.id] = len(self.__model_indexes)
+            arr = []
+            for i in self.__model_indexes.items():
+                record = db.make_record(self.__index_record_len, i[0], i[1])
+                arr.append(record)
             f.writelines(arr)
 
         return model
@@ -167,7 +160,7 @@ class CarService:
 
         car, _ = car_index
         # looking for a model name and brand
-        model = self.__find_model_by_id(str(car.model), self.root_directory_path)
+        model = self.__find_model_by_id(car.model, self.root_directory_path)
         if not model:  # if the model is not found
             return None
 
@@ -267,7 +260,7 @@ class CarService:
     # Task 7. Top 3 best selling models.
     def top_models_by_sales(self) -> list[ModelSaleStats]:
         '''Find top 3 models by amount of sales.'''
-        model_sales_dict: dict[str, int] = {}
+        model_sales_dict: dict[int, int] = {}
 
         # getting all sold cars and adding models and their sales count
         # to the dictionary
@@ -283,7 +276,7 @@ class CarService:
                 # looking for a car
                 car_index = self.__find_car_by_vin(car_vin, self.root_directory_path)
                 if car_index:
-                    car_model = str(car_index[0].model)
+                    car_model = car_index[0].model
                     # adding to the dictionary
                     model_sales_dict[car_model] = model_sales_dict[car_model] + \
                         1 if car_model in model_sales_dict else 1
@@ -296,29 +289,19 @@ class CarService:
 
         # joining with the models table to get name and brand of a model
         for model_id, count in top_3_models:
-            line_number = -1
-            with open(self.root_directory_path + "/models_index.txt", "r") as f:
-                while True:
-                    line = f.readline()
-                    if not line:
-                        break
-                    # model_line is the number of the line in models.txt
-                    model_index, model_line = [i for i in line.strip().split(';')]
-                    if model_index == model_id:
-                        line_number = int(model_line)
-                        break
+            line_number = self.__model_indexes[model_id] if model_id in self.__model_indexes else None
 
-            with open(self.root_directory_path + "/models.txt", "r") as f:
-                f.seek(line_number * (self.__record_len + self.__ws_size))
-                val = f.read(self.__record_len)
-                index, model_name, model_brand = val.strip().split(';')
-                model_sale_stats.append(
-                    ModelSaleStats(
-                        car_model_name=model_name,
-                        brand=model_brand,
-                        sales_number=count
+            if line_number is not None:
+                with open(self.root_directory_path + "/models.txt", "r") as f:
+                    f.seek(line_number * (self.__record_len + self.__ws_size))
+                    val = f.read(self.__record_len)
+                    index, model_name, model_brand = val.strip().split(';')
+                    model_sale_stats.append(
+                        ModelSaleStats(
+                            car_model_name=model_name,
+                            brand=model_brand,
+                            sales_number=count
+                        )
                     )
-                )
-        print('model_sale_stats = ', model_sale_stats)
 
         return model_sale_stats
