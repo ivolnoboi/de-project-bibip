@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+import os
 from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale, DatabaseRecord as db
 
 
@@ -19,7 +20,7 @@ class CarService:
                     break
 
         with open(root_dir_path + "/cars.txt", "r") as f:
-            f.seek(line_number * 502)
+            f.seek(line_number * (self.__record_len + self.__ws_size))
             val = f.read(501)
             return Car.make_object(val), line_number
         return None
@@ -37,7 +38,7 @@ class CarService:
                     break
 
         with open(root_dir_path + "/models.txt", "r") as f:
-            f.seek(line_number * 502)
+            f.seek(line_number * (self.__record_len + self.__ws_size))
             val = f.read(501)
             return Model.make_object(val)
         return None
@@ -55,7 +56,7 @@ class CarService:
                     break
 
         with open(root_dir_path + "/sales.txt", "r") as f:
-            f.seek(line_number * 502)
+            f.seek(line_number * (self.__record_len + self.__ws_size))
             val = f.read(501)
             return Sale.make_object(val)
         return None
@@ -65,6 +66,8 @@ class CarService:
         # length of records in the database
         self.__record_len = 500
         self.__index_record_len = 30
+        # size of whitespace (depends on operating system)
+        self.__ws_size = 2 if os.name == 'nt' else 1
         # database initialization (creating tables)
         open(self.root_directory_path + "/models.txt", "a").close()
         open(self.root_directory_path + "/models_index.txt", 'a').close()
@@ -132,7 +135,7 @@ class CarService:
             car, index_num = car_index
             car.status = CarStatus('sold')
             with open(self.root_directory_path + "/cars.txt", "r+") as f:
-                f.seek(index_num * 502)
+                f.seek(index_num * (self.__record_len + self.__ws_size))
                 line_to_write = car.make_record(self.__record_len)
                 f.write(line_to_write)
         return car
@@ -204,7 +207,7 @@ class CarService:
             f.writelines(arr)
 
         with open(self.root_directory_path + "/cars.txt", "r+") as f:
-            f.seek(car_line * 502)
+            f.seek(car_line * (self.__record_len + self.__ws_size))
             car.vin = new_vin
             line_to_write = car.make_record(self.__record_len)
             f.write(line_to_write)
@@ -240,14 +243,14 @@ class CarService:
         cur_line = line_number + 1
         with open(self.root_directory_path + "/sales.txt", "r+") as f:
             while True:
-                f.seek(cur_line * 502)
+                f.seek(cur_line * (self.__record_len + self.__ws_size))
                 line = f.read(501)
                 if not line:
                     break
-                f.seek((cur_line - 1) * 502)
+                f.seek((cur_line - 1) * (self.__record_len + self.__ws_size))
                 f.write(line)
                 cur_line += 1
-            f.seek((cur_line - 1) * 502)
+            f.seek((cur_line - 1) * (self.__record_len + self.__ws_size))
             f.truncate()
 
         # finding a car and changing status to available
@@ -256,7 +259,7 @@ class CarService:
             car, index_num = car_index
             car.status = CarStatus('available')
             with open(self.root_directory_path + "/cars.txt", "r+") as f:
-                f.seek(index_num * 502)
+                f.seek(index_num * (self.__record_len + self.__ws_size))
                 line_to_write = car.make_record(self.__record_len)
                 f.write(line_to_write)
         return car
@@ -306,7 +309,7 @@ class CarService:
                         break
 
             with open(self.root_directory_path + "/models.txt", "r") as f:
-                f.seek(line_number * 502)
+                f.seek(line_number * (self.__record_len + self.__ws_size))
                 val = f.read(501)
                 index, model_name, model_brand = val.strip().split(';')
                 model_sale_stats.append(
