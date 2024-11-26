@@ -11,21 +11,15 @@ class CarService:
     def __find_car_by_vin(self, vin: str, root_dir_path: str) -> tuple[Car, int] | None:
         '''Find a car record by vin in a table and create a car object.\n
         Returns: car object and it's index in table cars.txt.'''
-        line_number: int | None = None
-        with open(root_dir_path + "/cars_index.txt", "r") as f:
-            while True:
-                line = f.readline()
-                if not line:  # if it's end of file
-                    return None
-                if vin in line:  # if record is found
-                    line_number = int(line.strip().split(';')[1])
-                    break
+        line_number = self.__car_indexes[vin] if vin in self.__car_indexes else None
 
-        with open(root_dir_path + "/cars.txt", "r") as f:
-            f.seek(line_number * (self.__record_len + self.__ws_size))
-            val = f.read(self.__record_len)
-            return Car.make_object(val), line_number
-        return None
+        if line_number is not None:
+            with open(root_dir_path + "/cars.txt", "r") as f:
+                f.seek(line_number * (self.__record_len + self.__ws_size))
+                val = f.read(self.__record_len)
+                return Car.make_object(val), line_number
+        else:
+            return None
 
     def __find_model_by_id(self, model_id: int, root_dir_path: str) -> Model | None:
         line_number = self.__model_indexes[model_id] if model_id in self.__model_indexes else None
@@ -96,12 +90,12 @@ class CarService:
         with open(self.root_directory_path + "/cars.txt", "a") as f:
             f.write(result_str)
 
-        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
-            arr = f.readlines()
-            new_index = len(arr)
-            arr.append(db.make_record(self.__index_record_len, car.vin, new_index))
-            arr = sorted(arr)
-            f.seek(0)
+        with open(self.root_directory_path + "/cars_index.txt", "w") as f:
+            self.__car_indexes[car.vin] = len(self.__car_indexes)
+            arr = []
+            for i in self.__car_indexes.items():
+                record = db.make_record(self.__index_record_len, i[0], i[1])
+                arr.append(record)
             f.writelines(arr)
 
         return car
@@ -183,20 +177,23 @@ class CarService:
         )
 
     # Task 5. Updating key field.
-    def update_vin(self, vin: str, new_vin: str) -> Car:
+    def update_vin(self, vin: str, new_vin: str) -> Car | None:
         '''Update a vin number.'''
-        # find a car
+        # looking for a car
         car_index = self.__find_car_by_vin(vin, self.root_directory_path)
         if car_index:
             car, car_line = car_index
+        else:
+            return None
 
-        # recalculating indexes
-        with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
-            arr = f.readlines()
-            index, _ = [(i, v) for i, v in enumerate(arr) if f'{car.vin};{car_line}' in v][0]
-            arr[index] = db.make_record(self.__index_record_len, new_vin, car_line)
-            arr = sorted(arr)
-            f.seek(0)
+        # rewriting indexes
+        with open(self.root_directory_path + "/cars_index.txt", "w") as f:
+            self.__car_indexes.pop(car.vin)
+            self.__car_indexes[new_vin] = car_line
+            arr = []
+            for i in self.__car_indexes.items():
+                record = db.make_record(self.__index_record_len, i[0], i[1])
+                arr.append(record)
             f.writelines(arr)
 
         with open(self.root_directory_path + "/cars.txt", "r+") as f:
