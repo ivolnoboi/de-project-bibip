@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale
+from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale, DatabaseRecord as db
 
 
 class CarService:
@@ -62,6 +62,9 @@ class CarService:
 
     def __init__(self, root_directory_path: str) -> None:
         self.root_directory_path = root_directory_path
+        # length of records in the database
+        self.__record_len = 500
+        self.__index_record_len = 30
         # database initialization (creating tables)
         open(self.root_directory_path + "/models.txt", "a").close()
         open(self.root_directory_path + "/models_index.txt", 'a').close()
@@ -73,7 +76,7 @@ class CarService:
     # Task 1. Adding a model to the models table.
     def add_model(self, model: Model) -> Model:
         '''Add a model to the models table.'''
-        result_str = model.make_record()
+        result_str = model.make_record(self.__record_len)
         with open(self.root_directory_path + "/models.txt", "a") as f:
             f.write(result_str)
 
@@ -84,7 +87,7 @@ class CarService:
                 i.strip().split(';')[1])) for i in arr]
             temp_arr.append((model.id, new_index))
             temp_arr = sorted(temp_arr, key=lambda x: x[0])
-            arr = [f'{i[0]};{i[1]}'.ljust(30) + '\n' for i in temp_arr]
+            arr = [db.make_record(self.__index_record_len, i[0], i[1]) for i in temp_arr]
             f.seek(0)
             f.writelines(arr)
 
@@ -93,14 +96,14 @@ class CarService:
     # Task 1. Adding a car to the cars table.
     def add_car(self, car: Car) -> Car:
         '''Add a car to the cars table.'''
-        result_str = car.make_record()
+        result_str = car.make_record(self.__record_len)
         with open(self.root_directory_path + "/cars.txt", "a") as f:
             f.write(result_str)
 
         with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
             arr = f.readlines()
             new_index = len(arr)
-            arr.append(f'{car.vin};{new_index}'.ljust(30) + '\n')
+            arr.append(db.make_record(self.__index_record_len, car.vin, new_index))
             arr = sorted(arr)
             f.seek(0)
             f.writelines(arr)
@@ -110,7 +113,7 @@ class CarService:
     # Task 2. Save sale.
     def sell_car(self, sale: Sale) -> Car:
         '''Save a sale record to the sales table.'''
-        result_str = sale.make_record()
+        result_str = sale.make_record(self.__record_len)
         with open(self.root_directory_path + "/sales.txt", "a") as f:
             f.write(result_str)
 
@@ -120,7 +123,7 @@ class CarService:
             temp_arr = [i.strip().split(';') for i in arr]
             temp_arr.append([sale.car_vin, str(new_index)])
             temp_arr = sorted(temp_arr, key=lambda x: x[0])
-            arr = [f'{i[0]};{i[1]}'.ljust(30) + '\n' for i in temp_arr]
+            arr = [db.make_record(self.__index_record_len, i[0], i[1]) for i in temp_arr]
             f.seek(0)
             f.writelines(arr)
 
@@ -130,7 +133,7 @@ class CarService:
             car.status = CarStatus('sold')
             with open(self.root_directory_path + "/cars.txt", "r+") as f:
                 f.seek(index_num * 502)
-                line_to_write = car.make_record()
+                line_to_write = car.make_record(self.__record_len)
                 f.write(line_to_write)
         return car
 
@@ -195,7 +198,7 @@ class CarService:
         with open(self.root_directory_path + "/cars_index.txt", "r+") as f:
             arr = f.readlines()
             index, _ = [(i, v) for i, v in enumerate(arr) if f'{car.vin};{car_line}' in v][0]
-            arr[index] = f'{new_vin};{car_line}'.ljust(30) + '\n'
+            arr[index] = db.make_record(self.__index_record_len, new_vin, car_line)
             arr = sorted(arr)
             f.seek(0)
             f.writelines(arr)
@@ -203,7 +206,7 @@ class CarService:
         with open(self.root_directory_path + "/cars.txt", "r+") as f:
             f.seek(car_line * 502)
             car.vin = new_vin
-            line_to_write = car.make_record()
+            line_to_write = car.make_record(self.__record_len)
             f.write(line_to_write)
         return car
 
@@ -227,7 +230,7 @@ class CarService:
             # recalculating indexes
             for elem in arr[sale_ind + 1:]:
                 vin, ind = elem.strip().split(';')
-                second_arr.append(f'{vin};{int(ind) - 1}'.ljust(30) + '\n')
+                second_arr.append(db.make_record(self.__index_record_len, vin, int(ind) - 1))
             arr = first_arr + second_arr
             f.seek(0)
             f.writelines(arr)
@@ -254,7 +257,7 @@ class CarService:
             car.status = CarStatus('available')
             with open(self.root_directory_path + "/cars.txt", "r+") as f:
                 f.seek(index_num * 502)
-                line_to_write = car.make_record()
+                line_to_write = car.make_record(self.__record_len)
                 f.write(line_to_write)
         return car
 

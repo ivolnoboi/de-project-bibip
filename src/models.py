@@ -5,6 +5,21 @@ from enum import StrEnum
 from pydantic import BaseModel
 
 
+class DatabaseRecord:
+    @staticmethod
+    def extend_str_to(str: str, count: int):
+        '''Extend the line to `count` characters.'''
+        return str.ljust(count) + '\n'
+
+    @staticmethod
+    def make_record(len: int, *args):
+        '''Make a string for inserting into a table.'''
+        result = ''
+        for value in args:
+            result += str(value) + ';'
+        return DatabaseRecord.extend_str_to(result[:-1], len)
+
+
 class CarStatus(StrEnum):
     available = "available"
     reserve = "reserve"
@@ -22,9 +37,9 @@ class Car(BaseModel):
     def index(self) -> str:
         return self.vin
 
-    def make_record(self) -> str:
+    def make_record(self, len: int) -> str:
         '''Make a string from a car object for inserting into a table.'''
-        return f'{self.vin};{self.model};{self.price};{self.date_start};{self.status}'.ljust(500) + '\n'
+        return DatabaseRecord.make_record(len, self.vin, self.model, self.price, self.date_start, self.status)
 
     @classmethod
     def make_object(cls, record: str):
@@ -47,9 +62,9 @@ class Model(BaseModel):
     def index(self) -> str:
         return str(self.id)
 
-    def make_record(self) -> str:
+    def make_record(self, len: int) -> str:
         '''Make a string from a model object for inserting into a table.'''
-        return f'{self.id};{self.name};{self.brand}'.ljust(500) + '\n'
+        return DatabaseRecord.make_record(len, self.id, self.name, self.brand)
 
     @classmethod
     def make_object(cls, record: str):
@@ -71,9 +86,9 @@ class Sale(BaseModel):
     def index(self) -> str:
         return self.car_vin
 
-    def make_record(self) -> str:
+    def make_record(self, len: int) -> str:
         '''Make a string from a sale object for inserting into a table.'''
-        return f'{self.sales_number};{self.car_vin};{self.sales_date};{self.cost}'.ljust(500) + '\n'
+        return DatabaseRecord.make_record(len, self.sales_number, self.car_vin, self.sales_date, self.cost)
 
     @classmethod
     def make_object(cls, record: str):
