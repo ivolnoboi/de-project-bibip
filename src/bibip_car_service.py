@@ -40,6 +40,16 @@ class CarService:
                 return Sale.make_object(val)
         return None
 
+    def __add_to_index_file(self, elem: int | str, file_name: str, dict: SortedDict) -> None:
+        '''Add an item to an index file.'''
+        with open(self.root_directory_path + "/" + file_name, "w") as f:
+            dict[elem] = len(dict)
+            arr = []
+            for i in dict.items():
+                record = db.make_record(self.__index_record_len, i[0], i[1])
+                arr.append(record)
+            f.writelines(arr)
+
     def __init__(self, root_directory_path: str) -> None:
         self.root_directory_path = root_directory_path
         # length of records in the database
@@ -65,13 +75,7 @@ class CarService:
         with open(self.root_directory_path + "/models.txt", "a") as f:
             f.write(result_str)
 
-        with open(self.root_directory_path + "/models_index.txt", "w") as f:
-            self.__model_indexes[model.id] = len(self.__model_indexes)
-            arr = []
-            for i in self.__model_indexes.items():
-                record = db.make_record(self.__index_record_len, i[0], i[1])
-                arr.append(record)
-            f.writelines(arr)
+        self.__add_to_index_file(model.id, 'models_index.txt', self.__model_indexes)
 
         return model
 
@@ -82,13 +86,7 @@ class CarService:
         with open(self.root_directory_path + "/cars.txt", "a") as f:
             f.write(result_str)
 
-        with open(self.root_directory_path + "/cars_index.txt", "w") as f:
-            self.__car_indexes[car.vin] = len(self.__car_indexes)
-            arr = []
-            for i in self.__car_indexes.items():
-                record = db.make_record(self.__index_record_len, i[0], i[1])
-                arr.append(record)
-            f.writelines(arr)
+        self.__add_to_index_file(car.vin, 'cars_index.txt', self.__car_indexes)
 
         return car
 
@@ -99,13 +97,7 @@ class CarService:
         with open(self.root_directory_path + "/sales.txt", "a") as f:
             f.write(result_str)
 
-        with open(self.root_directory_path + "/sales_index.txt", "w") as f:
-            self.__sale_indexes[sale.car_vin] = len(self.__sale_indexes)
-            arr = []
-            for i in self.__sale_indexes.items():
-                record = db.make_record(self.__index_record_len, i[0], i[1])
-                arr.append(record)
-            f.writelines(arr)
+        self.__add_to_index_file(sale.car_vin, 'sales_index.txt', self.__sale_indexes)
 
         car_index = self.__find_car_by_vin(sale.car_vin, self.root_directory_path)
         if car_index:
