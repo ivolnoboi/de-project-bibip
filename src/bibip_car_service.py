@@ -21,7 +21,7 @@ class CarService:
 
         with open(root_dir_path + "/cars.txt", "r") as f:
             f.seek(line_number * (self.__record_len + self.__ws_size))
-            val = f.read(501)
+            val = f.read(self.__record_len)
             return Car.make_object(val), line_number
         return None
 
@@ -39,7 +39,7 @@ class CarService:
 
         with open(root_dir_path + "/models.txt", "r") as f:
             f.seek(line_number * (self.__record_len + self.__ws_size))
-            val = f.read(501)
+            val = f.read(self.__record_len)
             return Model.make_object(val)
         return None
 
@@ -57,7 +57,7 @@ class CarService:
 
         with open(root_dir_path + "/sales.txt", "r") as f:
             f.seek(line_number * (self.__record_len + self.__ws_size))
-            val = f.read(501)
+            val = f.read(self.__record_len)
             return Sale.make_object(val)
         return None
 
@@ -244,7 +244,7 @@ class CarService:
         with open(self.root_directory_path + "/sales.txt", "r+") as f:
             while True:
                 f.seek(cur_line * (self.__record_len + self.__ws_size))
-                line = f.read(501)
+                line = f.read(self.__record_len)
                 if not line:
                     break
                 f.seek((cur_line - 1) * (self.__record_len + self.__ws_size))
@@ -310,7 +310,7 @@ class CarService:
 
             with open(self.root_directory_path + "/models.txt", "r") as f:
                 f.seek(line_number * (self.__record_len + self.__ws_size))
-                val = f.read(501)
+                val = f.read(self.__record_len)
                 index, model_name, model_brand = val.strip().split(';')
                 model_sale_stats.append(
                     ModelSaleStats(
